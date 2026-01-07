@@ -1,6 +1,17 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
+// Notification type
+export interface Notification {
+    id: string;
+    type: "rental_overdue" | "contract_expiring" | "payment_received" | "info";
+    title: string;
+    message: string;
+    link?: string;
+    createdAt: string;
+    read: boolean;
+}
+
 interface AppState {
     // Language & Direction
     language: "en" | "ar";
@@ -21,6 +32,13 @@ interface AppState {
     }>;
     addToast: (toast: { type: "success" | "error" | "warning" | "info"; message: string }) => void;
     removeToast: (id: string) => void;
+
+    // Notifications (bell icon)
+    notifications: Notification[];
+    addNotification: (notification: Omit<Notification, "id" | "createdAt" | "read">) => void;
+    removeNotification: (id: string) => void;
+    markAsRead: (id: string) => void;
+    clearAllNotifications: () => void;
 
     // Modal state
     activeModal: string | null;
@@ -62,6 +80,32 @@ export const useAppStore = create<AppState>()(
                     toasts: state.toasts.filter((t) => t.id !== id),
                 })),
 
+            // Notifications (bell icon)
+            notifications: [],
+            addNotification: (notification) =>
+                set((state) => ({
+                    notifications: [
+                        {
+                            ...notification,
+                            id: Math.random().toString(36).substring(7),
+                            createdAt: new Date().toISOString(),
+                            read: false,
+                        },
+                        ...state.notifications,
+                    ],
+                })),
+            removeNotification: (id) =>
+                set((state) => ({
+                    notifications: state.notifications.filter((n) => n.id !== id),
+                })),
+            markAsRead: (id) =>
+                set((state) => ({
+                    notifications: state.notifications.map((n) =>
+                        n.id === id ? { ...n, read: true } : n
+                    ),
+                })),
+            clearAllNotifications: () => set({ notifications: [] }),
+
             // Modal state
             activeModal: null,
             modalData: null,
@@ -75,6 +119,7 @@ export const useAppStore = create<AppState>()(
                 language: state.language,
                 direction: state.direction,
                 sidebarCollapsed: state.sidebarCollapsed,
+                notifications: state.notifications,
             }),
         }
     )
