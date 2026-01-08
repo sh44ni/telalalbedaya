@@ -44,21 +44,48 @@ export async function GET(request: NextRequest) {
         let revenue = 0;
         let expenses = 0;
 
+        // Group transactions by month for chart data
+        const monthlyData: Record<string, { revenue: number; expenses: number }> = {};
+
         transactions.forEach(t => {
+            const txDate = new Date(t.date);
+            const monthKey = `${txDate.getFullYear()}-${String(txDate.getMonth() + 1).padStart(2, '0')}`;
+
+            if (!monthlyData[monthKey]) {
+                monthlyData[monthKey] = { revenue: 0, expenses: 0 };
+            }
+
             // Check if it's a Transaction (has category) or Receipt (legacy)
             if ('category' in t) {
                 if (t.category === "income") {
                     revenue += t.amount || 0;
+                    monthlyData[monthKey].revenue += t.amount || 0;
                 } else if (t.category === "expense") {
                     expenses += t.amount || 0;
+                    monthlyData[monthKey].expenses += t.amount || 0;
                 }
             } else {
                 // Legacy receipts are income
                 revenue += t.amount || 0;
+                monthlyData[monthKey].revenue += t.amount || 0;
             }
         });
 
         const netIncome = revenue - expenses;
+
+        // Convert monthly data to chart format
+        const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+        const chartData = Object.keys(monthlyData)
+            .sort()
+            .map(key => {
+                const [year, month] = key.split('-');
+                const monthIndex = parseInt(month) - 1;
+                return {
+                    month: monthNames[monthIndex],
+                    revenue: monthlyData[key].revenue,
+                    expenses: monthlyData[key].expenses,
+                };
+            });
 
         // Calculate properties stats
         const properties = data.properties || [];
@@ -123,6 +150,7 @@ export async function GET(request: NextRequest) {
                 revenueChange,
                 expenseChange,
             },
+            chartData,
             properties: propertiesStats,
             rentals: rentalsStats,
             period,

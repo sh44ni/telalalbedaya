@@ -3,8 +3,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { PageContainer } from "@/components/layout";
-import { Button, DataTable, Column, Modal, Input, Textarea, Select, Badge, useToast, Tabs } from "@/components/ui";
-import type { Transaction, Customer, Property, Project, TransactionCategory, TransactionType } from "@/types";
+import { Button, DataTable, Column, Modal, Input, Textarea, Select, Badge, useToast, Tabs, SearchableSelect } from "@/components/ui";
+import type { Transaction, Customer, Property, Project, TransactionCategory, TransactionType, Rental } from "@/types";
 import { Plus, Download, Eye, TrendingUp, TrendingDown } from "lucide-react";
 import { formatCurrency, formatDate } from "@/lib/utils";
 
@@ -41,6 +41,7 @@ export default function AccountsPage() {
     const [customers, setCustomers] = useState<Customer[]>([]);
     const [properties, setProperties] = useState<Property[]>([]);
     const [projects, setProjects] = useState<Project[]>([]);
+    const [rentals, setRentals] = useState<Rental[]>([]);
     const [loading, setLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isViewModalOpen, setIsViewModalOpen] = useState(false);
@@ -56,6 +57,7 @@ export default function AccountsPage() {
         customerId: "",
         propertyId: "",
         projectId: "",
+        rentalId: "",
         paymentMethod: "cash",
         reference: "",
         description: "",
@@ -71,11 +73,12 @@ export default function AccountsPage() {
     const fetchData = useCallback(async () => {
         setLoading(true);
         try {
-            const [transactionsRes, customersRes, propertiesRes, projectsRes] = await Promise.all([
+            const [transactionsRes, customersRes, propertiesRes, projectsRes, rentalsRes] = await Promise.all([
                 fetch("/api/transactions"),
                 fetch("/api/customers"),
                 fetch("/api/properties"),
                 fetch("/api/projects"),
+                fetch("/api/rentals"),
             ]);
 
             if (transactionsRes.ok) {
@@ -93,6 +96,10 @@ export default function AccountsPage() {
             if (projectsRes.ok) {
                 const data = await projectsRes.json();
                 setProjects(data);
+            }
+            if (rentalsRes.ok) {
+                const data = await rentalsRes.json();
+                setRentals(data);
             }
         } catch (error) {
             console.error("Error fetching data:", error);
@@ -178,6 +185,7 @@ export default function AccountsPage() {
             customerId: "",
             propertyId: "",
             projectId: "",
+            rentalId: "",
             paymentMethod: "cash",
             reference: "",
             description: "",
@@ -218,6 +226,7 @@ export default function AccountsPage() {
                 customerId: formData.category === "income" ? formData.customerId : undefined,
                 propertyId: formData.propertyId,
                 projectId: formData.projectId,
+                rentalId: formData.type === "rent_payment" ? formData.rentalId : undefined,
                 paymentMethod: formData.paymentMethod as Transaction["paymentMethod"],
                 reference: formData.reference || undefined,
                 description: formData.description,
@@ -446,21 +455,69 @@ export default function AccountsPage() {
                         />
                         {/* Customer field for Income, Paid To field for Expense */}
                         {formData.category === "income" ? (
-                            <Select
-                                label="Customer *"
-                                value={formData.customerId}
-                                onChange={(e) => {
-                                    const selectedCustomer = customers.find(c => c.id === e.target.value);
-                                    setFormData({
-                                        ...formData,
-                                        customerId: e.target.value,
-                                        paidBy: selectedCustomer?.name || ""
-                                    });
-                                    if (formErrors.customerId) setFormErrors({ ...formErrors, customerId: false });
-                                }}
-                                options={[{ value: "", label: "Select..." }, ...customerOptions]}
-                                error={formErrors.customerId ? "Required" : undefined}
-                            />
+                            formData.type === "rent_payment" ? (
+                                <SearchableSelect
+                                    label="Customer *"
+                                    value={formData.customerId}
+                                    placeholder="Search by name or ID..."
+                                    options={customers.map(c => ({
+                                        value: c.id,
+                                        label: c.name,
+                                        subLabel: c.customerId
+                                    }))}
+                                    onChange={(value) => {
+                                        const selectedCustomer = customers.find(c => c.id === value);
+
+                                        // Find active rental for this customer
+                                        const customerRental = rentals.find(r =>
+                                            r.tenantId === value &&
+                                            new Date(r.leaseEnd) >= new Date()
+                                        );
+
+                                        if (customerRental) {
+                                            // Auto-populate from rental
+                                            const rentalProperty = properties.find(p => p.id === customerRental.propertyId);
+                                            setFormData({
+                                                ...formData,
+                                                customerId: value,
+                                                paidBy: selectedCustomer?.name || "",
+                                                propertyId: customerRental.propertyId,
+                                                projectId: rentalProperty?.projectId || formData.projectId,
+                                                rentalId: customerRental.id,
+                                                amount: customerRental.monthlyRent.toString()
+                                            });
+                                        } else {
+                                            setFormData({
+                                                ...formData,
+                                                customerId: value,
+                                                paidBy: selectedCustomer?.name || "",
+                                                rentalId: ""
+                                            });
+                                        }
+
+                                        if (formErrors.customerId) setFormErrors({ ...formErrors, customerId: false });
+                                        if (formErrors.amount) setFormErrors({ ...formErrors, amount: false });
+                                    }}
+                                    error={formErrors.customerId ? "Required" : undefined}
+                                />
+                            ) : (
+                                <Select
+                                    label="Customer *"
+                                    value={formData.customerId}
+                                    onChange={(e) => {
+                                        const selectedCustomer = customers.find(c => c.id === e.target.value);
+                                        setFormData({
+                                            ...formData,
+                                            customerId: e.target.value,
+                                            paidBy: selectedCustomer?.name || "",
+                                            rentalId: ""
+                                        });
+                                        if (formErrors.customerId) setFormErrors({ ...formErrors, customerId: false });
+                                    }}
+                                    options={[{ value: "", label: "Select..." }, ...customerOptions]}
+                                    error={formErrors.customerId ? "Required" : undefined}
+                                />
+                            )
                         ) : (
                             <Input
                                 label="Paid To *"
@@ -471,6 +528,44 @@ export default function AccountsPage() {
                                 }}
                                 placeholder="Contractor, Vendor, etc."
                                 error={formErrors.paidBy ? "Required" : undefined}
+                            />
+                        )}
+                        {/* Rental dropdown for rent payments (auto-populated but can be changed) */}
+                        {formData.category === "income" && formData.type === "rent_payment" && formData.customerId && (
+                            <Select
+                                label="Rental"
+                                value={formData.rentalId}
+                                onChange={(e) => {
+                                    const selectedRental = rentals.find(r => r.id === e.target.value);
+                                    if (selectedRental) {
+                                        const rentalProperty = properties.find(p => p.id === selectedRental.propertyId);
+                                        setFormData({
+                                            ...formData,
+                                            rentalId: e.target.value,
+                                            propertyId: selectedRental.propertyId,
+                                            projectId: rentalProperty?.projectId || formData.projectId,
+                                            amount: selectedRental.monthlyRent.toString()
+                                        });
+                                    } else {
+                                        setFormData({
+                                            ...formData,
+                                            rentalId: e.target.value
+                                        });
+                                    }
+                                    if (formErrors.amount) setFormErrors({ ...formErrors, amount: false });
+                                }}
+                                options={[
+                                    { value: "", label: "Select rental..." },
+                                    ...rentals
+                                        .filter(r => r.tenantId === formData.customerId)
+                                        .map(r => {
+                                            const prop = properties.find(p => p.id === r.propertyId);
+                                            return {
+                                                value: r.id,
+                                                label: `${prop?.name || "Property"} - ${r.monthlyRent} OMR/month`
+                                            };
+                                        })
+                                ]}
                             />
                         )}
                         <Select

@@ -3,15 +3,48 @@ import { readData, writeData } from "@/lib/db";
 import { requireAuth } from "@/lib/auth-helpers";
 import type { Customer } from "@/types";
 
+// Generate customer ID in CUS-XXXX format
+function generateCustomerId(customers: Customer[]): string {
+    if (!customers || customers.length === 0) {
+        return "CUS-0001";
+    }
+
+    const numbers = customers
+        .map(c => {
+            const match = c.customerId?.match(/CUS-(\d+)/);
+            return match ? parseInt(match[1], 10) : 0;
+        })
+        .filter(n => !isNaN(n));
+
+    const maxNumber = numbers.length > 0 ? Math.max(...numbers) : 0;
+    const nextNumber = maxNumber + 1;
+
+    return `CUS-${nextNumber.toString().padStart(4, "0")}`;
+}
+
 // GET /api/customers - Get all customers
-export async function GET() {
+export async function GET(request: NextRequest) {
     // Protect route
     const session = await requireAuth();
     if (session instanceof NextResponse) return session;
 
     try {
         const data = readData();
-        return NextResponse.json(data.customers);
+        const { searchParams } = new URL(request.url);
+        const search = searchParams.get("search");
+
+        let customers = data.customers || [];
+
+        // Filter by search query (matches name or customerId)
+        if (search) {
+            const searchLower = search.toLowerCase();
+            customers = customers.filter(c =>
+                c.name?.toLowerCase().includes(searchLower) ||
+                c.customerId?.toLowerCase().includes(searchLower)
+            );
+        }
+
+        return NextResponse.json(customers);
     } catch (error) {
         return NextResponse.json({ error: "Failed to fetch customers" }, { status: 500 });
     }
@@ -48,6 +81,11 @@ export async function POST(request: NextRequest) {
         // Ensure ID exists
         if (!customer.id) {
             customer.id = `cust-${Date.now()}`;
+        }
+
+        // Auto-generate customerId if not provided
+        if (!customer.customerId) {
+            customer.customerId = generateCustomerId(data.customers);
         }
 
         // Set timestamps

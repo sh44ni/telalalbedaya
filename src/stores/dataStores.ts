@@ -347,10 +347,10 @@ export const useProjectsStore = create<DataStore<Project>>((set, get) => ({
             const response = await fetch("/api/projects");
             if (!response.ok) throw new Error("Failed to fetch");
             const projects = await response.json();
-            set({ items: projects.length > 0 ? projects : mockProjects, loading: false });
+            set({ items: projects, loading: false });
         } catch (error) {
-            console.warn("API unavailable, using mock data:", error);
-            set({ items: mockProjects, loading: false });
+            console.warn("API unavailable:", error);
+            set({ items: [], loading: false, error: "Failed to fetch projects" });
         }
     },
     addItem: async (item) => {
@@ -413,10 +413,10 @@ export const usePropertiesStore = create<DataStore<Property>>((set, get) => ({
             const response = await fetch("/api/properties");
             if (!response.ok) throw new Error("Failed to fetch");
             const properties = await response.json();
-            set({ items: properties.length > 0 ? properties : mockProperties, loading: false });
+            set({ items: properties, loading: false });
         } catch (error) {
-            console.warn("API unavailable, using mock data:", error);
-            set({ items: mockProperties, loading: false });
+            console.warn("API unavailable:", error);
+            set({ items: [], loading: false, error: "Failed to fetch properties" });
         }
     },
     addItem: async (item) => {
@@ -479,10 +479,10 @@ export const useCustomersStore = create<DataStore<Customer>>((set, get) => ({
             const response = await fetch("/api/customers");
             if (!response.ok) throw new Error("Failed to fetch");
             const customers = await response.json();
-            set({ items: customers.length > 0 ? customers : mockCustomers, loading: false });
+            set({ items: customers, loading: false });
         } catch (error) {
-            console.warn("API unavailable, using mock data:", error);
-            set({ items: mockCustomers, loading: false });
+            console.warn("API unavailable:", error);
+            set({ items: [], loading: false, error: "Failed to fetch customers" });
         }
     },
     addItem: async (item) => {
@@ -545,10 +545,10 @@ export const useRentalsStore = create<DataStore<Rental>>((set, get) => ({
             const response = await fetch("/api/rentals");
             if (!response.ok) throw new Error("Failed to fetch");
             const rentals = await response.json();
-            set({ items: rentals.length > 0 ? rentals : mockRentals, loading: false });
+            set({ items: rentals, loading: false });
         } catch (error) {
-            console.warn("API unavailable, using mock data:", error);
-            set({ items: mockRentals, loading: false });
+            console.warn("API unavailable:", error);
+            set({ items: [], loading: false, error: "Failed to fetch rentals" });
         }
     },
     addItem: async (item) => {

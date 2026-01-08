@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { PageContainer } from "@/components/layout";
 import { Button, DataTable, Column, Modal, Input, Textarea, Select, Badge, Tabs, useToast, ConfirmDialog } from "@/components/ui";
 import { useCustomersStore } from "@/stores/dataStores";
-import type { Customer } from "@/types";
-import { Plus, Users } from "lucide-react";
+import type { Customer, Transaction, Property } from "@/types";
+import { Plus, Eye } from "lucide-react";
+import { formatCurrency, formatDate } from "@/lib/utils";
 
 export default function CustomersPage() {
     const { t } = useTranslation();
@@ -19,6 +20,10 @@ export default function CustomersPage() {
     }, [fetchItems]);
 
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+    const [viewingCustomer, setViewingCustomer] = useState<Customer | null>(null);
+    const [customerTransactions, setCustomerTransactions] = useState<Transaction[]>([]);
+    const [customerProperties, setCustomerProperties] = useState<Property[]>([]);
     const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
     const [deleteConfirm, setDeleteConfirm] = useState<{ isOpen: boolean; customer: Customer | null }>({
         isOpen: false,
@@ -53,6 +58,7 @@ export default function CustomersPage() {
         : customers.filter(c => c.type === activeTab);
 
     const columns: Column<Customer>[] = [
+        { key: "customerId", label: "Customer ID", sortable: true },
         { key: "name", label: t("common.name"), sortable: true },
         {
             key: "type",
@@ -70,12 +76,38 @@ export default function CustomersPage() {
         { key: "email", label: t("common.email") },
         { key: "phone", label: t("common.phone") },
         { key: "nationality", label: "Nationality" },
-        {
-            key: "assignedPropertyIds",
-            label: t("customers.assignedProperties"),
-            render: (item) => item.assignedPropertyIds.length || "-",
-        },
     ];
+
+    // Fetch customer details for view modal
+    const fetchCustomerDetails = useCallback(async (customer: Customer) => {
+        try {
+            // Fetch transactions for this customer
+            const transactionsRes = await fetch("/api/transactions");
+            if (transactionsRes.ok) {
+                const allTransactions = await transactionsRes.json();
+                const customerTxns = allTransactions.filter((t: Transaction) => t.customerId === customer.id);
+                setCustomerTransactions(customerTxns);
+            }
+
+            // Fetch properties
+            const propertiesRes = await fetch("/api/properties");
+            if (propertiesRes.ok) {
+                const allProperties = await propertiesRes.json();
+                const assignedProps = allProperties.filter((p: Property) =>
+                    customer.assignedPropertyIds?.includes(p.id)
+                );
+                setCustomerProperties(assignedProps);
+            }
+        } catch (error) {
+            console.error("Error fetching customer details:", error);
+        }
+    }, []);
+
+    const handleViewDetails = (customer: Customer) => {
+        setViewingCustomer(customer);
+        fetchCustomerDetails(customer);
+        setIsViewModalOpen(true);
+    };
 
     const handleOpenModal = (customer?: Customer) => {
         setFormErrors({});
@@ -136,6 +168,7 @@ export default function CustomersPage() {
 
         const customerData: Customer = {
             id: editingCustomer?.id || `cust-${Date.now()}`,
+            customerId: editingCustomer?.customerId || "", // Backend will auto-generate
             name: formData.name,
             type: formData.type as Customer["type"],
             email: formData.email,
@@ -173,6 +206,11 @@ export default function CustomersPage() {
         setDeleteConfirm({ isOpen: false, customer: null });
     };
 
+    // Calculate total money received from transactions
+    const totalMoneyReceived = customerTransactions
+        .filter(t => t.category === "income")
+        .reduce((sum, t) => sum + t.amount, 0);
+
     return (
         <PageContainer
             title={t("customers.title")}
@@ -192,9 +230,19 @@ export default function CustomersPage() {
                     keyField="id"
                     onEdit={handleOpenModal}
                     onDelete={handleDeleteClick}
+                    actions={(item) => (
+                        <button
+                            onClick={() => handleViewDetails(item)}
+                            className="p-1.5 hover:bg-muted transition-colors text-muted-foreground hover:text-primary"
+                            title="View Details"
+                        >
+                            <Eye size={16} />
+                        </button>
+                    )}
                 />
             </div>
 
+            {/* Create/Edit Customer Modal */}
             <Modal
                 isOpen={isModalOpen}
                 onClose={() => setIsModalOpen(false)}
@@ -256,7 +304,7 @@ export default function CustomersPage() {
                         onChange={(e) => setFormData({ ...formData, nationality: e.target.value })}
                     />
                     <Input
-                        label="Emirates ID"
+                        label="ID Number"
                         value={formData.emiratesId}
                         onChange={(e) => setFormData({ ...formData, emiratesId: e.target.value })}
                     />
@@ -280,6 +328,123 @@ export default function CustomersPage() {
                         />
                     </div>
                 </div>
+            </Modal>
+
+            {/* View Details Modal */}
+            <Modal
+                isOpen={isViewModalOpen}
+                onClose={() => {
+                    setIsViewModalOpen(false);
+                    setViewingCustomer(null);
+                    setCustomerTransactions([]);
+                    setCustomerProperties([]);
+                }}
+                title="Customer Details"
+                size="lg"
+                footer={
+                    <Button variant="outline" onClick={() => setIsViewModalOpen(false)}>
+                        {t("common.close")}
+                    </Button>
+                }
+            >
+                {viewingCustomer && (
+                    <div className="space-y-6">
+                        {/* Header */}
+                        <div className="flex items-center justify-between border-b pb-4">
+                            <div>
+                                <div className="text-xl font-semibold">{viewingCustomer.name}</div>
+                                <div className="text-sm text-muted-foreground">{viewingCustomer.customerId || "ID not assigned"}</div>
+                            </div>
+                            <Badge variant={
+                                viewingCustomer.type === "tenant" ? "success" :
+                                    viewingCustomer.type === "buyer" ? "default" :
+                                        viewingCustomer.type === "lead" ? "warning" : "secondary"
+                            }>
+                                {t(`customers.${viewingCustomer.type}`)}
+                            </Badge>
+                        </div>
+
+                        {/* Contact Information */}
+                        <div>
+                            <h4 className="text-sm font-semibold text-muted-foreground mb-2">Contact Information</h4>
+                            <div className="grid grid-cols-2 gap-3 text-sm">
+                                <div>
+                                    <span className="text-muted-foreground">Phone:</span>
+                                    <span className="ml-2 font-medium">{viewingCustomer.phone}</span>
+                                </div>
+                                {viewingCustomer.alternatePhone && (
+                                    <div>
+                                        <span className="text-muted-foreground">Alt Phone:</span>
+                                        <span className="ml-2 font-medium">{viewingCustomer.alternatePhone}</span>
+                                    </div>
+                                )}
+                                <div>
+                                    <span className="text-muted-foreground">Email:</span>
+                                    <span className="ml-2 font-medium">{viewingCustomer.email || "-"}</span>
+                                </div>
+                                <div className="col-span-2">
+                                    <span className="text-muted-foreground">Address:</span>
+                                    <span className="ml-2 font-medium">{viewingCustomer.address || "-"}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* ID Documents */}
+                        <div>
+                            <h4 className="text-sm font-semibold text-muted-foreground mb-2">ID Documents</h4>
+                            <div className="grid grid-cols-3 gap-3 text-sm">
+                                <div>
+                                    <span className="text-muted-foreground">ID Number:</span>
+                                    <span className="ml-2 font-medium">{viewingCustomer.emiratesId || "-"}</span>
+                                </div>
+                                <div>
+                                    <span className="text-muted-foreground">Passport:</span>
+                                    <span className="ml-2 font-medium">{viewingCustomer.passportNo || "-"}</span>
+                                </div>
+                                <div>
+                                    <span className="text-muted-foreground">Nationality:</span>
+                                    <span className="ml-2 font-medium">{viewingCustomer.nationality || "-"}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Assigned Properties */}
+                        <div>
+                            <h4 className="text-sm font-semibold text-muted-foreground mb-2">Assigned Properties</h4>
+                            {customerProperties.length > 0 ? (
+                                <div className="flex flex-wrap gap-2">
+                                    {customerProperties.map(p => (
+                                        <Badge key={p.id} variant="secondary">{p.name}</Badge>
+                                    ))}
+                                </div>
+                            ) : (
+                                <span className="text-sm text-muted-foreground">No properties assigned</span>
+                            )}
+                        </div>
+
+                        {/* Financial Summary */}
+                        <div className="bg-muted/50 p-4 border">
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <div className="text-sm text-muted-foreground">Customer Since</div>
+                                    <div className="font-medium">{formatDate(viewingCustomer.createdAt)}</div>
+                                </div>
+                                <div>
+                                    <div className="text-sm text-muted-foreground">Total Money Received</div>
+                                    <div className="font-semibold text-success">{formatCurrency(totalMoneyReceived)}</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Notes */}
+                        {viewingCustomer.notes && (
+                            <div>
+                                <h4 className="text-sm font-semibold text-muted-foreground mb-2">Notes</h4>
+                                <p className="text-sm text-muted-foreground">{viewingCustomer.notes}</p>
+                            </div>
+                        )}
+                    </div>
+                )}
             </Modal>
 
             <ConfirmDialog

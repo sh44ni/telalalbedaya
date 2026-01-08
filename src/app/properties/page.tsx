@@ -147,6 +147,7 @@ export default function PropertiesPage() {
     const validateForm = (): boolean => {
         const errors: Record<string, boolean> = {};
 
+        if (!formData.projectId) errors.projectId = true;
         if (!formData.name.trim()) errors.name = true;
         if (!formData.location.trim()) errors.location = true;
         if (!formData.price || parseFloat(formData.price) <= 0) errors.price = true;
@@ -296,7 +297,10 @@ export default function PropertiesPage() {
                     <Select
                         label={t("nav.projects") + " *"}
                         value={formData.projectId}
-                        onChange={(e) => setFormData({ ...formData, projectId: e.target.value })}
+                        onChange={(e) => {
+                            setFormData({ ...formData, projectId: e.target.value });
+                            if (formErrors.projectId) setFormErrors({ ...formErrors, projectId: false });
+                        }}
                         options={[
                             { value: "", label: t("common.select") + " " + t("nav.projects").toLowerCase() + "..." },
                             ...projects.map((project) => ({
@@ -304,6 +308,7 @@ export default function PropertiesPage() {
                                 label: project.name,
                             })),
                         ]}
+                        shake={shakeFields.projectId}
                     />
                     <Input
                         label={t("common.name") + " *"}

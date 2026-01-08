@@ -171,6 +171,25 @@ export async function POST(request: NextRequest) {
             }
         }
 
+        // Update rental if it's a rent payment
+        if (body.type === "rent_payment" && body.rentalId) {
+            const rental = data.rentals.find(r => r.id === body.rentalId);
+            if (rental) {
+                // Calculate how many months this payment covers
+                const monthsCovered = Math.floor(parseFloat(body.amount) / rental.monthlyRent);
+
+                // Update paidUntil date
+                const currentPaidUntil = new Date(rental.paidUntil);
+                currentPaidUntil.setMonth(currentPaidUntil.getMonth() + monthsCovered);
+                rental.paidUntil = currentPaidUntil.toISOString().split("T")[0];
+
+                // Update payment status
+                const today = new Date();
+                rental.paymentStatus = currentPaidUntil >= today ? "paid" : "overdue";
+                rental.updatedAt = new Date().toISOString();
+            }
+        }
+
         // Add transaction to database
         data.receipts.push(newTransaction);
         writeData(data);

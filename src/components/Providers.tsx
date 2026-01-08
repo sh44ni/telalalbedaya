@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 import { SessionProvider } from "next-auth/react";
 import { I18nextProvider } from "react-i18next";
 import i18n from "@/lib/i18n";
@@ -11,6 +12,10 @@ import { ToastContainer } from "@/components/ui";
 export function Providers({ children }: { children: React.ReactNode }) {
     const [mounted, setMounted] = useState(false);
     const { language, direction } = useAppStore();
+    const pathname = usePathname();
+
+    // Check if current page is login
+    const isLoginPage = pathname === "/login";
 
     useEffect(() => {
         setMounted(true);
@@ -33,8 +38,8 @@ export function Providers({ children }: { children: React.ReactNode }) {
         <SessionProvider>
             <I18nextProvider i18n={i18n}>
                 <div dir={direction}>
-                    <Sidebar />
-                    <Header />
+                    {!isLoginPage && <Sidebar />}
+                    {!isLoginPage && <Header />}
                     {children}
                     <ToastContainer />
                 </div>

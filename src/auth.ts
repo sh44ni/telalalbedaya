@@ -1,7 +1,6 @@
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
-import { readData } from "@/lib/db";
 import type { User } from "@/types";
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
@@ -18,6 +17,9 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         }
 
         try {
+          // Dynamic import to avoid Edge Runtime issues
+          // This only runs during actual authentication (Node.js runtime)
+          const { readData } = await import("@/lib/db");
           const db = readData();
           const user = db.users.find(
             (u: User) => u.email === credentials.email
@@ -73,3 +75,4 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     strategy: "jwt",
   },
 });
+

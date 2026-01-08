@@ -59,6 +59,7 @@ export type CustomerType = "buyer" | "tenant" | "lead" | "owner";
 
 export interface Customer {
     id: string;
+    customerId: string; // Searchable ID like "CUS-0001"
     name: string;
     type: CustomerType;
     email: string;
@@ -256,6 +257,65 @@ export interface RentalContract {
     landlordSignDate: string;
     tenantSignature: string;
     tenantSignDate: string;
+
+    // Meta
+    pdfUrl?: string;
+    createdAt: string;
+    updatedAt: string;
+}
+
+// Sale Contract with full details for PDF generation
+export interface SaleContract {
+    id: string;
+    contractNumber: string; // Auto: "SC-YYYYMMDD-XXX"
+    type: ContractType;
+    status: ContractStatus;
+
+    // Seller (First Party)
+    sellerId: string;
+    sellerName: string;
+    sellerCR?: string;
+    sellerNationality: string;
+    sellerAddress: string;
+    sellerPhone: string;
+
+    // Buyer (Second Party)
+    buyerId: string;
+    buyerName: string;
+    buyerCR?: string;
+    buyerNationality: string;
+    buyerAddress: string;
+    buyerPhone: string;
+
+    // Property Details
+    propertyWilaya: string;
+    propertyGovernorate: string;
+    propertyPhase: string;
+    propertyLandNumber: string;
+    propertyArea: string; // in sqm
+
+    // Payment Terms
+    totalPrice: number;
+    totalPriceWords: string; // Amount in words
+    depositAmount: number;
+    depositAmountWords: string;
+    depositDate: string;
+    remainingAmount: number;
+    remainingAmountWords: string;
+    remainingDueDate: string;
+    finalPaymentAmount: number;
+    finalPaymentAmountWords: string;
+
+    // Construction Timeline
+    constructionStartDate: string;
+    constructionEndDate: string;
+
+    // Notes/Disclaimer
+    notes?: string;
+
+    // Signatures
+    sellerSignature: string;
+    buyerSignature: string;
 
     // Meta
     pdfUrl?: string;
