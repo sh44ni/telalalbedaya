@@ -6,6 +6,7 @@ import type { Project, Property, Customer, Rental, Receipt, Contract, Document }
 export const mockProjects: Project[] = [
     {
         id: "proj-001",
+        projectId: "PRJ-0001",
         name: "Al Noor Tower",
         description: "Luxury residential tower with 40 apartments",
         budget: 15000000,
@@ -20,6 +21,7 @@ export const mockProjects: Project[] = [
     },
     {
         id: "proj-002",
+        projectId: "PRJ-0002",
         name: "Palm Villas Complex",
         description: "10 luxury villas with private gardens",
         budget: 25000000,
@@ -34,6 +36,7 @@ export const mockProjects: Project[] = [
     },
     {
         id: "proj-003",
+        projectId: "PRJ-0003",
         name: "Business Hub Mall",
         description: "Commercial center with 50 retail units",
         budget: 35000000,
@@ -51,6 +54,7 @@ export const mockProjects: Project[] = [
 export const mockProperties: Property[] = [
     {
         id: "prop-001",
+        propertyId: "PRP-0001",
         name: "Al Noor Tower - Unit 101",
         type: "apartment",
         status: "rented",
@@ -70,6 +74,7 @@ export const mockProperties: Property[] = [
     },
     {
         id: "prop-002",
+        propertyId: "PRP-0002",
         name: "Palm Villa 5",
         type: "villa",
         status: "available",
@@ -89,6 +94,7 @@ export const mockProperties: Property[] = [
     },
     {
         id: "prop-003",
+        propertyId: "PRP-0003",
         name: "Business Hub - Shop 12",
         type: "shop",
         status: "available",
@@ -106,6 +112,7 @@ export const mockProperties: Property[] = [
     },
     {
         id: "prop-004",
+        propertyId: "PRP-0004",
         name: "Al Noor Tower - Unit 205",
         type: "apartment",
         status: "available",
@@ -125,6 +132,7 @@ export const mockProperties: Property[] = [
     },
     {
         id: "prop-005",
+        propertyId: "PRP-0005",
         name: "Business Hub - Office 301",
         type: "office",
         status: "rented",
@@ -145,6 +153,7 @@ export const mockProperties: Property[] = [
 export const mockCustomers: Customer[] = [
     {
         id: "cust-001",
+        customerId: "CUS-0001",
         name: "Ahmed Al Rashid",
         type: "tenant",
         email: "ahmed.rashid@email.com",
@@ -159,6 +168,7 @@ export const mockCustomers: Customer[] = [
     },
     {
         id: "cust-002",
+        customerId: "CUS-0002",
         name: "Sarah Johnson",
         type: "buyer",
         email: "sarah.j@email.com",
@@ -173,6 +183,7 @@ export const mockCustomers: Customer[] = [
     },
     {
         id: "cust-003",
+        customerId: "CUS-0003",
         name: "Mohammed Hassan",
         type: "tenant",
         email: "m.hassan@email.com",
@@ -187,6 +198,7 @@ export const mockCustomers: Customer[] = [
     },
     {
         id: "cust-004",
+        customerId: "CUS-0004",
         name: "Fatima Al Maktoum",
         type: "lead",
         email: "fatima.m@email.com",
@@ -203,6 +215,7 @@ export const mockCustomers: Customer[] = [
 export const mockRentals: Rental[] = [
     {
         id: "rent-001",
+        rentalId: "RNT-0001",
         propertyId: "prop-001",
         tenantId: "cust-001",
         monthlyRent: 85000,
@@ -218,6 +231,7 @@ export const mockRentals: Rental[] = [
     },
     {
         id: "rent-002",
+        rentalId: "RNT-0002",
         propertyId: "prop-005",
         tenantId: "cust-003",
         monthlyRent: 15000,
