@@ -26,6 +26,7 @@ interface DataTableProps<T> {
     loading?: boolean;
     emptyMessage?: string;
     actions?: (item: T) => React.ReactNode;
+    customActions?: (item: T) => React.ReactNode;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -41,6 +42,7 @@ export function DataTable<T extends Record<string, any>>({
     loading = false,
     emptyMessage,
     actions,
+    customActions,
 }: DataTableProps<T>) {
     const { t } = useTranslation();
     const [search, setSearch] = useState("");
@@ -99,7 +101,7 @@ export function DataTable<T extends Record<string, any>>({
         }
     };
 
-    const hasActions = onView || onEdit || onDelete || actions;
+    const hasActions = onView || onEdit || onDelete || actions || customActions;
 
     return (
         <div className="bg-card border border-border">
@@ -195,6 +197,7 @@ export function DataTable<T extends Record<string, any>>({
                                                     actions(item)
                                                 ) : (
                                                     <>
+                                                        {customActions && customActions(item)}
                                                         {onView && (
                                                             <button
                                                                 onClick={() => onView(item)}

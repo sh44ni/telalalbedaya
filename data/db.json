@@ -17,8 +17,8 @@
       "description": "",
       "budget": 50000,
       "spent": 0,
-      "completion": 0,
-      "status": "in_progress",
+      "completion": 100,
+      "status": "completed",
       "startDate": "2026-01-08",
       "endDate": "2026-01-27",
       "costs": {
@@ -27,12 +27,83 @@
         "overhead": 0
       },
       "createdAt": "2026-01-08T17:12:00.776Z",
-      "updatedAt": "2026-01-08T17:12:20.638Z"
+      "updatedAt": "2026-01-09T09:12:58.207Z"
     }
   ],
-  "properties": [],
-  "customers": [],
-  "rentals": [],
+  "properties": [
+    {
+      "id": "prop-1767896817282",
+      "name": "test apartment",
+      "type": "apartment",
+      "status": "available",
+      "price": 121,
+      "rentalPrice": 12,
+      "area": 12,
+      "bedrooms": 12,
+      "bathrooms": 12,
+      "location": "12",
+      "address": "12",
+      "description": "12",
+      "projectId": "proj-1767892320776",
+      "features": [],
+      "images": [],
+      "createdAt": "2026-01-08T18:26:57.282Z",
+      "updatedAt": "2026-01-08T18:26:57.336Z"
+    },
+    {
+      "id": "prop-1767949920399",
+      "propertyId": "PRP-0001",
+      "name": "5454",
+      "type": "apartment",
+      "status": "available",
+      "price": 150,
+      "rentalPrice": 120,
+      "area": 120,
+      "bedrooms": 120,
+      "bathrooms": 120,
+      "location": "120",
+      "address": "120",
+      "description": "120",
+      "projectId": "proj-1767892320776",
+      "features": [],
+      "images": [],
+      "createdAt": "2026-01-09T09:12:00.399Z",
+      "updatedAt": "2026-01-09T09:12:00.442Z"
+    }
+  ],
+  "customers": [
+    {
+      "id": "cust-1767949544446",
+      "customerId": "CUS-0001",
+      "name": "Umar Farooq",
+      "type": "lead",
+      "email": "",
+      "phone": "0543469462",
+      "address": "Al Nahda",
+      "notes": "",
+      "assignedPropertyIds": [],
+      "createdAt": "2026-01-09T09:05:44.446Z",
+      "updatedAt": "2026-01-09T09:05:44.490Z"
+    }
+  ],
+  "rentals": [
+    {
+      "id": "rent-1767949565326",
+      "propertyId": "prop-1767896817282",
+      "tenantId": "cust-1767949544446",
+      "monthlyRent": 150,
+      "depositAmount": 100,
+      "leaseStart": "2026-01-09",
+      "leaseEnd": "2026-01-22",
+      "dueDay": 1,
+      "paymentStatus": "unpaid",
+      "paidUntil": "2026-01-09",
+      "notes": "",
+      "createdAt": "2026-01-09T09:06:05.326Z",
+      "updatedAt": "2026-01-09T09:06:05.360Z",
+      "rentalId": "RNT-0001"
+    }
+  ],
   "receipts": [],
   "contracts": [],
   "documents": [],

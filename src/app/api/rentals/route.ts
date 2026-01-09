@@ -3,6 +3,25 @@ import { readData, writeData } from "@/lib/db";
 import { requireAuth } from "@/lib/auth-helpers";
 import type { Rental } from "@/types";
 
+// Generate rental ID in RNT-XXXX format
+function generateRentalId(rentals: Rental[]): string {
+    if (!rentals || rentals.length === 0) {
+        return "RNT-0001";
+    }
+
+    const numbers = rentals
+        .map(r => {
+            const match = r.rentalId?.match(/RNT-(\d+)/);
+            return match ? parseInt(match[1], 10) : 0;
+        })
+        .filter(n => !isNaN(n));
+
+    const maxNumber = numbers.length > 0 ? Math.max(...numbers) : 0;
+    const nextNumber = maxNumber + 1;
+
+    return `RNT-${nextNumber.toString().padStart(4, "0")}`;
+}
+
 // GET /api/rentals - Get all rentals with tenant and property data
 export async function GET() {
     const session = await requireAuth();
@@ -86,6 +105,11 @@ export async function POST(request: NextRequest) {
         // Ensure ID exists
         if (!rental.id) {
             rental.id = `rent-${Date.now()}`;
+        }
+
+        // Generate rental ID if not present
+        if (!rental.rentalId) {
+            rental.rentalId = generateRentalId(data.rentals);
         }
 
         // Set timestamps

@@ -3,6 +3,7 @@
 // ============ Project Types ============
 export interface Project {
     id: string;
+    projectId: string; // Searchable ID like "PRJ-0001"
     name: string;
     description: string;
     budget: number;
@@ -26,6 +27,7 @@ export type PropertyStatus = "available" | "rented" | "sold" | "under_maintenanc
 
 export interface Property {
     id: string;
+    propertyId: string; // Searchable ID like "PRP-0001"
     name: string;
     type: PropertyType;
     status: PropertyStatus;
@@ -80,6 +82,7 @@ export type PaymentStatus = "paid" | "unpaid" | "partially_paid" | "overdue";
 
 export interface Rental {
     id: string;
+    rentalId: string; // Searchable ID like "RNT-0001"
     propertyId: string;
     property?: Property;
     tenantId: string;

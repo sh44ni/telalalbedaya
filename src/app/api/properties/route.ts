@@ -3,6 +3,25 @@ import { readData, writeData } from "@/lib/db";
 import { requireAuth } from "@/lib/auth-helpers";
 import type { Property } from "@/types";
 
+// Generate property ID in PRP-XXXX format
+function generatePropertyId(properties: Property[]): string {
+    if (!properties || properties.length === 0) {
+        return "PRP-0001";
+    }
+
+    const numbers = properties
+        .map(p => {
+            const match = p.propertyId?.match(/PRP-(\d+)/);
+            return match ? parseInt(match[1], 10) : 0;
+        })
+        .filter(n => !isNaN(n));
+
+    const maxNumber = numbers.length > 0 ? Math.max(...numbers) : 0;
+    const nextNumber = maxNumber + 1;
+
+    return `PRP-${nextNumber.toString().padStart(4, "0")}`;
+}
+
 // GET /api/properties - Get all properties
 export async function GET() {
     const session = await requireAuth();
@@ -52,6 +71,11 @@ export async function POST(request: NextRequest) {
         // Ensure ID exists
         if (!property.id) {
             property.id = `prop-${Date.now()}`;
+        }
+
+        // Generate property ID if not present
+        if (!property.propertyId) {
+            property.propertyId = generatePropertyId(data.properties);
         }
 
         // Set timestamps

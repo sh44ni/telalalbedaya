@@ -93,6 +93,8 @@ const enTranslations = {
         materials: "Materials",
         labor: "Labor",
         overhead: "Overhead",
+        updateProgress: "Update Progress",
+        autoCompleteNote: "Setting progress to 100% will automatically mark this project as completed.",
     },
     properties: {
         title: "Properties",
@@ -299,6 +301,8 @@ const arTranslations = {
         materials: "المواد",
         labor: "العمالة",
         overhead: "النفقات العامة",
+        updateProgress: "تحديث التقدم",
+        autoCompleteNote: "تعيين نسبة الإنجاز إلى 100% سيؤدي تلقائياً إلى تحديد المشروع كمكتمل.",
     },
     properties: {
         title: "العقارات",

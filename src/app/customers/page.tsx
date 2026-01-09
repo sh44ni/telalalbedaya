@@ -4,15 +4,17 @@ import { useState, useEffect, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { PageContainer } from "@/components/layout";
 import { Button, DataTable, Column, Modal, Input, Textarea, Select, Badge, Tabs, useToast, ConfirmDialog } from "@/components/ui";
-import { useCustomersStore } from "@/stores/dataStores";
+import { useCustomersStore, useRentalsStore, usePropertiesStore } from "@/stores/dataStores";
 import type { Customer, Transaction, Property } from "@/types";
-import { Plus, Eye } from "lucide-react";
+import { Plus, Eye, Edit, Trash2 } from "lucide-react";
 import { formatCurrency, formatDate } from "@/lib/utils";
 
 export default function CustomersPage() {
     const { t } = useTranslation();
     const toast = useToast();
     const { items: customers, addItem, updateItem, deleteItem, fetchItems } = useCustomersStore();
+    const { fetchItems: fetchRentals } = useRentalsStore();
+    const { fetchItems: fetchProperties } = usePropertiesStore();
 
     // Fetch customers from API on component mount
     useEffect(() => {
@@ -28,6 +30,17 @@ export default function CustomersPage() {
     const [deleteConfirm, setDeleteConfirm] = useState<{ isOpen: boolean; customer: Customer | null }>({
         isOpen: false,
         customer: null,
+    });
+    const [viewDeleteConfirm, setViewDeleteConfirm] = useState<{
+        isOpen: boolean;
+        customer: Customer | null;
+        propertiesCount: number;
+        transactionsCount: number;
+    }>({
+        isOpen: false,
+        customer: null,
+        propertiesCount: 0,
+        transactionsCount: 0,
     });
     const [activeTab, setActiveTab] = useState("all");
     const [formData, setFormData] = useState({
@@ -206,6 +219,56 @@ export default function CustomersPage() {
         setDeleteConfirm({ isOpen: false, customer: null });
     };
 
+    // Handle Edit Details from view modal
+    const handleEditFromViewModal = () => {
+        if (viewingCustomer) {
+            setIsViewModalOpen(false);
+            handleOpenModal(viewingCustomer);
+        }
+    };
+
+    // Handle Delete from view modal - shows detailed warning
+    const handleDeleteFromViewModal = () => {
+        if (viewingCustomer) {
+            setViewDeleteConfirm({
+                isOpen: true,
+                customer: viewingCustomer,
+                propertiesCount: customerProperties.length,
+                transactionsCount: customerTransactions.length,
+            });
+        }
+    };
+
+    // Confirm delete from view modal with cascade
+    const handleViewDeleteConfirm = async () => {
+        if (!viewDeleteConfirm.customer) return;
+
+        try {
+            const res = await fetch(`/api/customers/${viewDeleteConfirm.customer.id}`, {
+                method: "DELETE",
+            });
+
+            if (res.ok) {
+                const result = await res.json();
+                toast.success(`${result.customerName} deleted successfully. ${result.deletedTransactions} transactions deleted, ${result.freedProperties} properties freed.`);
+
+                // Refresh all related stores to sync data everywhere
+                fetchItems();        // Refresh customers
+                fetchRentals();      // Refresh rentals (some may have been deleted)
+                fetchProperties();   // Refresh properties (statuses may have changed)
+
+                // Close modals
+                setViewDeleteConfirm({ isOpen: false, customer: null, propertiesCount: 0, transactionsCount: 0 });
+                setIsViewModalOpen(false);
+                setViewingCustomer(null);
+            } else {
+                toast.error("Failed to delete customer");
+            }
+        } catch (error) {
+            toast.error("An error occurred while deleting customer");
+        }
+    };
+
     // Calculate total money received from transactions
     const totalMoneyReceived = customerTransactions
         .filter(t => t.category === "income")
@@ -342,9 +405,21 @@ export default function CustomersPage() {
                 title="Customer Details"
                 size="lg"
                 footer={
-                    <Button variant="outline" onClick={() => setIsViewModalOpen(false)}>
-                        {t("common.close")}
-                    </Button>
+                    <div className="flex justify-between w-full">
+                        <div className="flex gap-2">
+                            <Button variant="outline" onClick={handleEditFromViewModal}>
+                                <Edit size={16} />
+                                {t("common.edit")} Details
+                            </Button>
+                            <Button variant="destructive" onClick={handleDeleteFromViewModal}>
+                                <Trash2 size={16} />
+                                Delete Customer
+                            </Button>
+                        </div>
+                        <Button variant="outline" onClick={() => setIsViewModalOpen(false)}>
+                            {t("common.close")}
+                        </Button>
+                    </div>
                 }
             >
                 {viewingCustomer && (
@@ -457,6 +532,55 @@ export default function CustomersPage() {
                 cancelText={t("common.cancel")}
                 variant="destructive"
             />
+
+            {/* Special Delete Confirmation for View Modal */}
+            <Modal
+                isOpen={viewDeleteConfirm.isOpen}
+                onClose={() => setViewDeleteConfirm({ isOpen: false, customer: null, propertiesCount: 0, transactionsCount: 0 })}
+                title="⚠️ Delete Customer"
+                size="md"
+                footer={
+                    <div className="flex justify-end gap-2 w-full">
+                        <Button
+                            variant="outline"
+                            onClick={() => setViewDeleteConfirm({ isOpen: false, customer: null, propertiesCount: 0, transactionsCount: 0 })}
+                        >
+                            {t("common.cancel")}
+                        </Button>
+                        <Button variant="destructive" onClick={handleViewDeleteConfirm}>
+                            <Trash2 size={16} />
+                            Delete Customer
+                        </Button>
+                    </div>
+                }
+            >
+                <div className="space-y-4">
+                    <p className="text-foreground">
+                        Are you sure you want to delete <strong>{viewDeleteConfirm.customer?.name}</strong>?
+                    </p>
+
+                    <div className="bg-destructive/10 border border-destructive/30 p-4 space-y-2">
+                        <p className="text-sm font-semibold text-destructive">Warning: This action cannot be undone!</p>
+                        <ul className="text-sm text-destructive/90 space-y-1 list-disc list-inside">
+                            {viewDeleteConfirm.propertiesCount > 0 && (
+                                <li>
+                                    <strong>{viewDeleteConfirm.propertiesCount}</strong> property(s) currently rented will be marked as <strong>Available</strong>
+                                </li>
+                            )}
+                            {viewDeleteConfirm.transactionsCount > 0 && (
+                                <li>
+                                    <strong>{viewDeleteConfirm.transactionsCount}</strong> transaction(s) associated with this customer will be <strong>deleted permanently</strong>
+                                </li>
+                            )}
+                            <li>All rental agreements for this customer will be <strong>terminated</strong></li>
+                        </ul>
+                    </div>
+
+                    <p className="text-sm text-muted-foreground">
+                        If you proceed, the customer&apos;s record and all associated data will be permanently removed from the system.
+                    </p>
+                </div>
+            </Modal>
         </PageContainer>
     );
 }

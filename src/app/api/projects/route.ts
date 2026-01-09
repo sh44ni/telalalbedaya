@@ -2,6 +2,25 @@ import { NextRequest, NextResponse } from "next/server";
 import { readData, writeData } from "@/lib/db";
 import type { Project } from "@/types";
 
+// Generate project ID in PRJ-XXXX format
+function generateProjectId(projects: Project[]): string {
+    if (!projects || projects.length === 0) {
+        return "PRJ-0001";
+    }
+
+    const numbers = projects
+        .map(p => {
+            const match = p.projectId?.match(/PRJ-(\d+)/);
+            return match ? parseInt(match[1], 10) : 0;
+        })
+        .filter(n => !isNaN(n));
+
+    const maxNumber = numbers.length > 0 ? Math.max(...numbers) : 0;
+    const nextNumber = maxNumber + 1;
+
+    return `PRJ-${nextNumber.toString().padStart(4, "0")}`;
+}
+
 // GET /api/projects - Get all projects
 export async function GET() {
     try {
@@ -51,6 +70,11 @@ export async function POST(request: NextRequest) {
         // Ensure ID exists
         if (!project.id) {
             project.id = `proj-${Date.now()}`;
+        }
+
+        // Generate project ID if not present
+        if (!project.projectId) {
+            project.projectId = generateProjectId(data.projects);
         }
 
         // Set timestamps

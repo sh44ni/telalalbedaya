@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { useRouter } from "next/navigation";
 import { PageContainer } from "@/components/layout";
-import { Button, Card, CardContent, Select, useToast, Modal, Input } from "@/components/ui";
+import { Button, Card, CardContent, Select, useToast, Modal } from "@/components/ui";
 import { formatCurrency } from "@/lib/utils";
 import {
   BarChart,
@@ -27,23 +27,23 @@ import {
   ArrowDownRight,
   AlertTriangle,
   CheckCircle,
-  Clock,
-  HardDrive,
-  Trash2
+  MapPin,
+  Eye,
+  Bed,
+  Bath,
+  Maximize2
 } from "lucide-react";
+import type { Property } from "@/types";
 
-interface StorageData {
-  total: number;
-  system: number;
-  data: number;
-  available: number;
-  formatted: {
-    total: string;
-    system: string;
-    data: string;
-    available: string;
-  };
-}
+// Property type icons mapping
+const propertyTypeIcons: Record<string, string> = {
+  apartment: "🏢",
+  villa: "🏠",
+  shop: "🏪",
+  office: "🏛️",
+  land: "🌍",
+  warehouse: "🏭",
+};
 
 interface ChartDataPoint {
   month: string;
@@ -90,11 +90,9 @@ export default function DashboardPage() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Storage management state
-  const [storageData, setStorageData] = useState<StorageData | null>(null);
-  const [showCleanModal, setShowCleanModal] = useState(false);
-  const [confirmPhrase, setConfirmPhrase] = useState("");
-  const [cleaning, setCleaning] = useState(false);
+  // Available properties state
+  const [availableProperties, setAvailableProperties] = useState<Property[]>([]);
+  const [viewingProperty, setViewingProperty] = useState<Property | null>(null);
 
   const fetchDashboardData = useCallback(async () => {
     setLoading(true);
@@ -111,50 +109,24 @@ export default function DashboardPage() {
     }
   }, [period]);
 
-  const fetchStorageData = useCallback(async () => {
+  const fetchAvailableProperties = useCallback(async () => {
     try {
-      const response = await fetch("/api/storage");
+      const response = await fetch("/api/properties?status=available");
       if (response.ok) {
         const result = await response.json();
-        setStorageData(result);
+        setAvailableProperties(result);
       }
     } catch (error) {
-      console.error("Error fetching storage data:", error);
+      console.error("Error fetching available properties:", error);
     }
   }, []);
 
   useEffect(() => {
     fetchDashboardData();
-    fetchStorageData();
-  }, [fetchDashboardData, fetchStorageData]);
+    fetchAvailableProperties();
+  }, [fetchDashboardData, fetchAvailableProperties]);
 
-  const handleCleanData = async () => {
-    if (confirmPhrase !== "DELETE ALL DATA") return;
 
-    setCleaning(true);
-    try {
-      const response = await fetch("/api/storage", {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ confirmPhrase }),
-      });
-
-      if (response.ok) {
-        toast.success("All user data has been deleted successfully.");
-        setShowCleanModal(false);
-        setConfirmPhrase("");
-        fetchDashboardData();
-        fetchStorageData();
-      } else {
-        const result = await response.json();
-        toast.error(result.error || "Failed to clean data");
-      }
-    } catch (error) {
-      toast.error("Failed to clean data");
-    } finally {
-      setCleaning(false);
-    }
-  };
 
   const handleGenerateStatement = () => {
     toast.info("Generating statement...");
@@ -418,131 +390,159 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Storage Management Section */}
+        {/* Available Properties Section */}
         <div>
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold flex items-center gap-2">
-              <HardDrive size={20} />
-              Storage Management
+              <CheckCircle size={20} className="text-success" />
+              Available Properties ({availableProperties.length})
             </h2>
+            <Button variant="ghost" size="sm" onClick={() => router.push("/properties?status=available")}>
+              View All <ArrowRight size={14} />
+            </Button>
           </div>
-          <Card>
-            <CardContent className="p-6">
-              <div className="space-y-4">
-                {/* Storage Bar */}
-                <div>
-                  <div className="flex justify-between text-sm text-muted-foreground mb-2">
-                    <span>Storage Used</span>
-                    <span>{storageData?.formatted.total || "50 GB"} Total</span>
-                  </div>
-                  <div className="h-6 bg-muted overflow-hidden flex">
-                    {/* System portion (12GB) */}
-                    <div
-                      className="h-full bg-gray-400 flex items-center justify-center text-xs text-white font-medium"
-                      style={{ width: `${((storageData?.system || 12 * 1024 * 1024 * 1024) / (storageData?.total || 50 * 1024 * 1024 * 1024)) * 100}%` }}
-                    >
-                      System
-                    </div>
-                    {/* Data portion */}
-                    <div
-                      className="h-full bg-primary flex items-center justify-center text-xs text-white font-medium"
-                      style={{
-                        width: `${((storageData?.data || 0) / (storageData?.total || 50 * 1024 * 1024 * 1024)) * 100}%`,
-                        minWidth: storageData?.data ? "40px" : "0"
-                      }}
-                    >
-                      {storageData?.data ? "Data" : ""}
-                    </div>
-                  </div>
 
-                  {/* Legend */}
-                  <div className="flex gap-6 mt-3 text-sm">
-                    <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 bg-gray-400"></div>
-                      <span>System: {storageData?.formatted.system || "12 GB"}</span>
+          {availableProperties.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {availableProperties.slice(0, 6).map((property) => (
+                <Card
+                  key={property.id}
+                  className="hover:border-primary/50 transition-colors"
+                >
+                  <CardContent className="p-4">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-lg">{propertyTypeIcons[property.type] || "🏠"}</span>
+                          <span className="font-semibold truncate">{property.name}</span>
+                        </div>
+                        <div className="flex items-center gap-1 text-sm text-muted-foreground mb-2">
+                          <MapPin size={12} />
+                          <span className="truncate">{property.location}</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs text-muted-foreground capitalize">{property.type}</span>
+                          {property.rentalPrice && (
+                            <span className="text-sm font-medium text-success">
+                              {formatCurrency(property.rentalPrice)}/mo
+                            </span>
+                          )}
+                        </div>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 bg-primary"></div>
-                      <span>Data: {storageData?.formatted.data || "0 B"}</span>
+                    <div className="flex justify-end mt-3 pt-3 border-t">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setViewingProperty(property)}
+                      >
+                        <Eye size={14} />
+                        View Details
+                      </Button>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 bg-muted border border-border"></div>
-                      <span>Available: {storageData?.formatted.available || "38 GB"}</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Clean Button */}
-                <div className="flex justify-end pt-4 border-t">
-                  <Button
-                    variant="destructive"
-                    onClick={() => setShowCleanModal(true)}
-                    className="flex items-center gap-2"
-                  >
-                    <Trash2 size={16} />
-                    Clean All Data
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : (
+            <Card>
+              <CardContent className="p-8 text-center text-muted-foreground">
+                <Building2 size={40} className="mx-auto mb-4 opacity-50" />
+                <p>No available properties</p>
+                <p className="text-sm">All properties are currently rented or sold</p>
+              </CardContent>
+            </Card>
+          )}
         </div>
       </div>
 
-      {/* Clean Confirmation Modal */}
+      {/* Property Details Modal */}
       <Modal
-        isOpen={showCleanModal}
-        onClose={() => {
-          setShowCleanModal(false);
-          setConfirmPhrase("");
-        }}
-        title="⚠️ Delete All User Data"
+        isOpen={!!viewingProperty}
+        onClose={() => setViewingProperty(null)}
+        title={viewingProperty?.name || "Property Details"}
+        size="md"
+        footer={
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setViewingProperty(null)}>
+              Close
+            </Button>
+            <Button onClick={() => router.push("/properties")}>
+              View All Properties
+            </Button>
+          </div>
+        }
       >
-        <div className="space-y-4">
-          <div className="p-4 bg-destructive/10 border border-destructive/20 text-destructive">
-            <p className="font-semibold">Warning: This action is irreversible!</p>
-            <p className="text-sm mt-2">
-              This will permanently delete all user data including:
-            </p>
-            <ul className="text-sm mt-2 ml-4 list-disc">
-              <li>All projects, properties, and customers</li>
-              <li>All rentals, receipts, and contracts</li>
-              <li>All documents and uploaded files</li>
-              <li>All transactions</li>
-            </ul>
-          </div>
+        {viewingProperty && (
+          <div className="space-y-4">
+            {/* Property ID and Type */}
+            <div className="flex items-center justify-between pb-3 border-b">
+              <span className="text-2xl">{propertyTypeIcons[viewingProperty.type] || "🏠"}</span>
+              <div className="text-right">
+                <span className="text-xs text-muted-foreground">ID: </span>
+                <span className="font-mono text-sm">{viewingProperty.propertyId || "-"}</span>
+              </div>
+            </div>
 
-          <div>
-            <p className="text-sm text-muted-foreground mb-2">
-              To confirm, type <strong>DELETE ALL DATA</strong> below:
-            </p>
-            <Input
-              value={confirmPhrase}
-              onChange={(e) => setConfirmPhrase(e.target.value)}
-              placeholder="Type DELETE ALL DATA to confirm"
-              className="font-mono"
-            />
-          </div>
+            {/* Details Grid */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="flex items-center gap-2">
+                <MapPin size={16} className="text-muted-foreground" />
+                <div>
+                  <p className="text-xs text-muted-foreground">Location</p>
+                  <p className="font-medium">{viewingProperty.location}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Maximize2 size={16} className="text-muted-foreground" />
+                <div>
+                  <p className="text-xs text-muted-foreground">Area</p>
+                  <p className="font-medium">{viewingProperty.area} sqm</p>
+                </div>
+              </div>
+              {viewingProperty.bedrooms !== undefined && (
+                <div className="flex items-center gap-2">
+                  <Bed size={16} className="text-muted-foreground" />
+                  <div>
+                    <p className="text-xs text-muted-foreground">Bedrooms</p>
+                    <p className="font-medium">{viewingProperty.bedrooms}</p>
+                  </div>
+                </div>
+              )}
+              {viewingProperty.bathrooms !== undefined && (
+                <div className="flex items-center gap-2">
+                  <Bath size={16} className="text-muted-foreground" />
+                  <div>
+                    <p className="text-xs text-muted-foreground">Bathrooms</p>
+                    <p className="font-medium">{viewingProperty.bathrooms}</p>
+                  </div>
+                </div>
+              )}
+            </div>
 
-          <div className="flex justify-end gap-3">
-            <Button
-              variant="outline"
-              onClick={() => {
-                setShowCleanModal(false);
-                setConfirmPhrase("");
-              }}
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={handleCleanData}
-              disabled={confirmPhrase !== "DELETE ALL DATA" || cleaning}
-            >
-              {cleaning ? "Deleting..." : "Confirm Delete"}
-            </Button>
+            {/* Pricing */}
+            <div className="grid grid-cols-2 gap-4 pt-3 border-t">
+              <div className="bg-muted/50 p-3">
+                <p className="text-xs text-muted-foreground">Sale Price</p>
+                <p className="text-lg font-bold">{formatCurrency(viewingProperty.price)}</p>
+              </div>
+              {viewingProperty.rentalPrice && (
+                <div className="bg-success/10 p-3">
+                  <p className="text-xs text-muted-foreground">Rental Price</p>
+                  <p className="text-lg font-bold text-success">{formatCurrency(viewingProperty.rentalPrice)}/mo</p>
+                </div>
+              )}
+            </div>
+
+            {/* Description */}
+            {viewingProperty.description && (
+              <div className="pt-3 border-t">
+                <p className="text-xs text-muted-foreground mb-1">Description</p>
+                <p className="text-sm">{viewingProperty.description}</p>
+              </div>
+            )}
           </div>
-        </div>
+        )}
       </Modal>
     </PageContainer>
   );
