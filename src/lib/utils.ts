@@ -70,3 +70,19 @@ export function getStatusColor(status: string): string {
   };
   return colors[status.toLowerCase()] || "bg-muted text-muted-foreground";
 }
+
+/**
+ * Normalize status values from database enum format (UPPERCASE) to translation key format (lowercase/camelCase)
+ * Examples: "AVAILABLE" -> "available", "UNDER_MAINTENANCE" -> "underMaintenance"
+ */
+export function normalizeStatus(status: string | undefined | null): string {
+  if (!status) return "";
+  // Convert to lowercase first
+  const lower = status.toLowerCase();
+  // Handle snake_case to camelCase conversion for specific cases
+  if (lower.includes("_")) {
+    const parts = lower.split("_");
+    return parts[0] + parts.slice(1).map(p => p.charAt(0).toUpperCase() + p.slice(1)).join("");
+  }
+  return lower;
+}

@@ -7,7 +7,7 @@ import { Button, DataTable, Column, Modal, Input, Textarea, Select, Badge, Tabs,
 import { usePropertiesStore, useProjectsStore } from "@/stores/dataStores";
 import type { Property } from "@/types";
 import { Plus, Building2, Grid, List, Eye, Bed, Bath, Maximize2, MapPin } from "lucide-react";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, normalizeStatus } from "@/lib/utils";
 
 export default function PropertiesPage() {
     const { t } = useTranslation();
@@ -93,13 +93,19 @@ export default function PropertiesPage() {
             key: "status",
             label: t("common.status"),
             render: (item) => {
+                const normalizedStatus = normalizeStatus(item.status);
                 const variants: Record<string, "success" | "warning" | "secondary" | "danger"> = {
                     available: "success",
                     rented: "warning",
                     sold: "secondary",
+                    undermaintenance: "danger",
                     under_maintenance: "danger",
                 };
-                return <Badge variant={variants[item.status]}>{t(`properties.${item.status}`)}</Badge>;
+                // Map normalized status to translation key
+                const translationKey = normalizedStatus === "undermaintenance" ? "underMaintenance" : normalizedStatus;
+                return <Badge variant={variants[normalizedStatus] || variants[item.status] || "secondary"}>
+                    {t(`properties.${translationKey}`) || item.status}
+                </Badge>;
             },
         },
     ];

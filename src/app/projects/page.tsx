@@ -7,7 +7,7 @@ import { Button, DataTable, Column, Modal, Input, Textarea, Select, Badge, useTo
 import { useProjectsStore } from "@/stores/dataStores";
 import type { Project } from "@/types";
 import { Plus, FolderKanban, TrendingUp } from "lucide-react";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, normalizeStatus } from "@/lib/utils";
 
 export default function ProjectsPage() {
     const { t } = useTranslation();
@@ -72,18 +72,23 @@ export default function ProjectsPage() {
             key: "status",
             label: t("common.status"),
             render: (item) => {
+                const normalizedStatus = normalizeStatus(item.status);
                 const variants: Record<string, "success" | "warning" | "secondary" | "danger"> = {
+                    inprogress: "warning",
                     in_progress: "warning",
                     completed: "success",
+                    onhold: "secondary",
                     on_hold: "secondary",
                     cancelled: "danger",
                 };
                 // Map status to correct translation key
                 const getStatusLabel = (status: string) => {
-                    switch (status) {
+                    switch (status.toLowerCase()) {
                         case "in_progress":
+                        case "inprogress":
                             return t("projects.inProgress");
                         case "on_hold":
+                        case "onhold":
                             return t("projects.onHold");
                         case "completed":
                             return t("common.completed");
@@ -94,8 +99,8 @@ export default function ProjectsPage() {
                     }
                 };
                 return (
-                    <Badge variant={variants[item.status] || "secondary"}>
-                        {getStatusLabel(item.status)}
+                    <Badge variant={variants[normalizedStatus] || variants[item.status] || "secondary"}>
+                        {getStatusLabel(normalizedStatus || item.status)}
                     </Badge>
                 );
             },

@@ -7,7 +7,7 @@ import { Button, DataTable, Column, Modal, Input, Select, Badge, useToast, Card,
 import { useRentalsStore, usePropertiesStore, useCustomersStore } from "@/stores/dataStores";
 import type { Rental } from "@/types";
 import { Plus, AlertTriangle, Mail, MoreVertical, Edit, Trash2 } from "lucide-react";
-import { formatCurrency, formatDate } from "@/lib/utils";
+import { formatCurrency, formatDate, normalizeStatus } from "@/lib/utils";
 import { useRef, useEffect as useEffectRef } from "react";
 
 export default function RentalsPage() {
@@ -71,12 +71,20 @@ export default function RentalsPage() {
         {
             key: "propertyId",
             label: t("rentals.property"),
-            render: (item) => properties.find(p => p.id === item.propertyId)?.name || item.propertyId,
+            render: (item) => {
+                // Use nested property data from API if available, otherwise fallback to properties array
+                if (item.property) return item.property.name;
+                return properties.find(p => p.id === item.propertyId)?.name || item.propertyId;
+            },
         },
         {
             key: "tenantId",
             label: t("rentals.tenant"),
-            render: (item) => customers.find(c => c.id === item.tenantId)?.name || item.tenantId,
+            render: (item) => {
+                // Use nested tenant data from API if available, otherwise fallback to customers array
+                if (item.tenant) return item.tenant.name;
+                return customers.find(c => c.id === item.tenantId)?.name || item.tenantId;
+            },
         },
         {
             key: "monthlyRent",
@@ -98,13 +106,19 @@ export default function RentalsPage() {
             key: "paymentStatus",
             label: t("rentals.paymentStatus"),
             render: (item) => {
+                const normalizedStatus = normalizeStatus(item.paymentStatus);
                 const variants: Record<string, "success" | "warning" | "danger" | "secondary"> = {
                     paid: "success",
                     unpaid: "warning",
+                    partiallypaid: "warning",
                     partially_paid: "warning",
                     overdue: "danger",
                 };
-                return <Badge variant={variants[item.paymentStatus]}>{t(`rentals.${item.paymentStatus}`) || item.paymentStatus}</Badge>;
+                // Map normalized status to translation key
+                const translationKey = normalizedStatus === "partiallypaid" ? "partiallyPaid" : normalizedStatus;
+                return <Badge variant={variants[normalizedStatus] || variants[item.paymentStatus] || "secondary"}>
+                    {t(`rentals.${translationKey}`) || item.paymentStatus}
+                </Badge>;
             },
         },
         {
@@ -258,7 +272,10 @@ export default function RentalsPage() {
         .map(c => ({ value: c.id, label: c.name }));
 
     const propertyOptions = properties
-        .filter(p => p.status === "available" || (editingRental && p.id === editingRental.propertyId))
+        .filter(p => {
+            const normalizedStatus = normalizeStatus(p.status);
+            return normalizedStatus === "available" || (editingRental && p.id === editingRental.propertyId);
+        })
         .map(p => ({ value: p.id, label: p.name }));
 
     return (
