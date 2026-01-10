@@ -60,15 +60,15 @@ export async function POST(request: NextRequest) {
                 contractNumber,
                 type: 'SALE',
                 status,
-                // Seller
-                sellerId: body.sellerId || "",
+                // Seller - use provided ID or null
+                sellerId: body.sellerId && body.sellerId.length > 0 ? body.sellerId : null,
                 sellerName: body.sellerName,
                 sellerCR: body.sellerCR || null,
                 sellerNationality: body.sellerNationality || "",
                 sellerAddress: body.sellerAddress || "",
                 sellerPhone: body.sellerPhone || "",
-                // Buyer
-                buyerId: body.buyerId || "",
+                // Buyer - use provided ID or null
+                buyerId: body.buyerId && body.buyerId.length > 0 ? body.buyerId : null,
                 buyerName: body.buyerName,
                 buyerCR: body.buyerCR || null,
                 buyerNationality: body.buyerNationality || "",
@@ -100,10 +100,6 @@ export async function POST(request: NextRequest) {
                 buyerSignature: body.buyerSignature || "",
                 // Meta
                 pdfUrl: body.pdfUrl || null,
-            },
-            include: {
-                seller: true,
-                buyer: true,
             },
         });
 

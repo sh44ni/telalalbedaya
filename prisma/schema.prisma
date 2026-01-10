@@ -359,7 +359,7 @@ model SaleContract {
   status                  ContractStatus @default(DRAFT)
 
   // Seller (First Party)
-  sellerId                String
+  sellerId                String?
   sellerName              String
   sellerCR                String?
   sellerNationality       String
@@ -367,7 +367,7 @@ model SaleContract {
   sellerPhone             String
 
   // Buyer (Second Party)
-  buyerId                 String
+  buyerId                 String?
   buyerName               String
   buyerCR                 String?
   buyerNationality        String
@@ -409,9 +409,9 @@ model SaleContract {
   createdAt               DateTime       @default(now())
   updatedAt               DateTime       @updatedAt
 
-  // Relations
-  seller                  Customer       @relation("SaleContractSeller", fields: [sellerId], references: [id], onDelete: Cascade)
-  buyer                   Customer       @relation("SaleContractBuyer", fields: [buyerId], references: [id], onDelete: Cascade)
+  // Relations (optional)
+  seller                  Customer?      @relation("SaleContractSeller", fields: [sellerId], references: [id], onDelete: SetNull)
+  buyer                   Customer?      @relation("SaleContractBuyer", fields: [buyerId], references: [id], onDelete: SetNull)
 
   @@index([contractNumber])
   @@index([sellerId])
