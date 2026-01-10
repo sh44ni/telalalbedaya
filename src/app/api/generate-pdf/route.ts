@@ -489,6 +489,12 @@ function generateHTML(contract: RentalContract, logoDataUrl: string): string {
 // Find Chrome executable path
 function getChromePath(): string {
     const paths = [
+        // Linux (Ubuntu/Debian VPS)
+        "/usr/bin/google-chrome",
+        "/usr/bin/google-chrome-stable",
+        "/usr/bin/chromium",
+        "/usr/bin/chromium-browser",
+        "/snap/bin/chromium",
         // Windows
         "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
         "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe",
@@ -496,6 +502,8 @@ function getChromePath(): string {
         // Edge (as fallback)
         "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe",
         "C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe",
+        // Mac
+        "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
     ];
 
     for (const p of paths) {
@@ -507,7 +515,7 @@ function getChromePath(): string {
         }
     }
 
-    throw new Error("Chrome not found. Please install Chrome or Edge.");
+    throw new Error("Chrome/Chromium not found. Please install Chrome or Chromium.");
 }
 
 export async function POST(request: NextRequest) {
@@ -525,11 +533,27 @@ export async function POST(request: NextRequest) {
         // Get Chrome path
         const chromePath = getChromePath();
 
-        // Launch browser
+        // Launch browser with memory-optimized settings
         const browser = await puppeteer.launch({
             executablePath: chromePath,
             headless: true,
-            args: ["--no-sandbox", "--disable-setuid-sandbox"],
+            args: [
+                "--no-sandbox",
+                "--disable-setuid-sandbox",
+                "--disable-dev-shm-usage",
+                "--disable-gpu",
+                "--disable-extensions",
+                "--disable-background-networking",
+                "--disable-default-apps",
+                "--disable-sync",
+                "--disable-translate",
+                "--hide-scrollbars",
+                "--metrics-recording-only",
+                "--mute-audio",
+                "--no-first-run",
+                "--safebrowsing-disable-auto-update",
+                "--single-process",
+            ],
         });
 
         const page = await browser.newPage();

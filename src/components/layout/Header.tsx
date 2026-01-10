@@ -35,8 +35,7 @@ export function Header() {
 
     const handleLogout = async () => {
         await signOut({
-            redirect: true,
-            callbackUrl: "/login"
+            redirectTo: "/login"
         });
     };
 
